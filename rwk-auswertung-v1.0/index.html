@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rundenwettkampf Auswertung</title>
+  <link rel="icon" id="favicon" href="assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Selection: choose a competition from the DISAG database -->
+  <section id="screen-select">
+    <div class="select-wrap">
+      <header class="brand">
+        <img class="brand-logo club-logo" src="assets/logo.png" alt="Vereinslogo">
+        <div>
+          <h1>Rundenwettkampf Auswertung</h1>
+          <p class="sub club-name" hidden></p>
+        </div>
+        <button id="settings-open" class="settings-btn" hidden title="Vereinsname, Logo, Farben und Datenquellen einstellen">⚙ Einstellungen</button>
+      </header>
+
+      <div id="tv-panel" class="tv-panel" hidden>
+        <span id="tv-status" class="tv-status">📺 TV-Anzeige: wird gesucht …</span>
+        <span id="gate-status" class="gate-status" hidden></span>
+        <span id="league-status" class="gate-status" hidden></span>
+        <label class="tv-screen" title="Auf welchem Bildschirm die Anzeige im Vollbild laufen soll">
+          Bildschirm <select id="tv-screen"></select>
+        </label>
+        <button id="tv-identify" title="Zeigt auf jedem Bildschirm kurz seine Nummer">🔢 Bildschirme zeigen</button>
+        <button id="tv-open">📺 Anzeige öffnen</button>
+        <button id="tv-quit">Beenden</button>
+      </div>
+
+      <!-- One button that reads the DISAG database again (the file is set in ⚙ Einstellungen) -->
+      <div id="data-panel" class="data-panel" hidden>
+        <button id="data-reload" class="reload-btn" title="Rundenwettkämpfe neu aus der DISAG-Datenbank lesen">⟳ Wettkampf-Daten neu einlesen</button>
+      </div>
+
+      <div id="list"></div>
+    </div>
+  </section>
+
+  <!-- Display on the TV -->
+  <section id="screen-show" hidden>
+    <header class="bar">
+      <img class="bar-logo club-logo" src="assets/logo.png" alt="">
+      <div class="title">
+        <span id="comp-name"></span>
+        <span id="comp-date"></span>
+      </div>
+      <span id="tv-badge" class="tv-badge" hidden title="Verbindung zur TV-Anzeige">📺</span>
+      <div class="counter"><span id="counter-label">Schuss</span> <b id="cur">0</b> / <span id="max">40</span></div>
+      <div class="controls">
+        <button id="b-back" title="Zurück zur Auswahl">☰ Auswahl</button>
+        <button id="b-restart" title="Von vorne (Pos1)">⏮</button>
+        <button id="b-prev-shooter" title="Vorheriger Schütze (↑)">⏪</button>
+        <button id="b-prev" title="Einen Schritt zurück (←)">◀</button>
+        <button id="b-play" class="play" title="Start / Pause (Leertaste)">▶</button>
+        <button id="b-next" title="Einen Schritt weiter (→)">▶▏</button>
+        <button id="b-next-shooter" title="Nächster Schütze (↓)">⏩</button>
+        <label class="interval" title="Abstand zwischen den Schüssen innerhalb einer Serie">
+          Schuss <input id="shot-gap" data-timer="shotGap" type="number" min="0.1" max="10" step="0.1"> s
+        </label>
+        <label class="interval" title="Pause vor dem ersten Schuss, nach jeder Serie und am Ende eines Schützen">
+          Pause <input id="pause" data-timer="pause" type="number" min="1" max="300" step="1"> s
+        </label>
+        <label class="interval" title="Wie lange die Übersicht mit allen Schützen zwischen zwei Schützen stehen bleibt">
+          Übersicht <input id="overview-time" data-timer="overview" type="number" min="1" max="300" step="1"> s
+        </label>
+        <button id="b-full" title="Vollbild (F)">⛶</button>
+      </div>
+    </header>
+    <div class="progress"><div id="prog"></div><div id="tick"></div></div>
+    <main id="rows"></main>
+    <main id="single" hidden></main>
+    <div id="overlay" hidden></div>
+  </section>
+
+  <!-- Idle screen on the TV while no competition is chosen on the control PC -->
+  <section id="screen-idle" hidden>
+    <div class="idle-box">
+      <img class="idle-logo club-logo" src="assets/logo.png" alt="Vereinslogo">
+      <h1>Rundenwettkampf</h1>
+      <p class="idle-club club-name" hidden></p>
+      <!-- Today's Rundenwettkaempfe from the DISAG database (filled by app.js) -->
+      <div id="idle-league" class="idle-league" hidden></div>
+      <!-- Who is logged in at which range (live from DISAG JSON Live, filled by app.js) -->
+      <div id="idle-ranges" class="idle-ranges" hidden></div>
+      <p id="idle-gate" class="idle-gate" hidden></p>
+      <p class="idle-wait" id="idle-wait">Gleich geht's los …</p>
+    </div>
+  </section>
+
+  <!-- Settings: branding (club name, logo, colors, all in one branding file), live data and database
+       (only with Starten.cmd, also applies to the TV display) -->
+  <div id="settings" class="settings-backdrop" hidden>
+    <div class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">Einstellungen</h2>
+
+      <section class="set-section">
+        <span class="set-label">Branding-Datei (Vereinsname, Logo und Farben in einer Datei)</span>
+        <div class="set-file-actions">
+          <button id="set-import" class="set-btn" type="button">Branding laden …</button>
+          <button id="set-export" class="set-btn" type="button">Branding exportieren</button>
+        </div>
+        <small class="set-note">Zum Übertragen auf einen anderen PC. Wirkt erst nach „Speichern“.</small>
+      </section>
+
+      <section class="set-section">
+        <label class="set-row">
+          <span class="set-label">Vereinsname</span>
+          <input id="set-name" type="text" maxlength="80" placeholder="z. B. Schützenverein Musterhausen">
+        </label>
+      </section>
+
+      <section class="set-section set-logo">
+        <img id="set-logo-preview" src="assets/logo.png" alt="Vorschau Logo">
+        <div class="set-logo-actions">
+          <span class="set-label">Logo</span>
+          <button id="set-logo-pick" class="set-btn" type="button">Logo wählen …</button>
+          <button id="set-logo-reset" class="set-btn" type="button">Standard-Logo</button>
+          <small>PNG mit transparentem Hintergrund sieht am besten aus, höchstens 5 MB.</small>
+        </div>
+      </section>
+
+      <section class="set-section">
+        <span class="set-label">Farben</span>
+        <div id="set-colors" class="set-colors"></div>
+      </section>
+
+      <p class="set-intro">Für die Auswertung der Rundenwettkämpfe reicht <b>Punkt 1</b>. Punkt 2 und 3 sind freiwillig und zeigen auf dem TV-Wartebild, wer gerade an welchem Stand schießt.</p>
+
+      <section class="set-section">
+        <span class="set-label">1. DISAG-Datenbank (nötig für die Auswertung)</span>
+        <div class="set-gate set-league">
+          <label class="set-row" title="Die Datenbank von OpticScore, meist C:\Disag\Daten\dboss.mdb">
+            <span>DISAG-Datenbank</span><input id="set-league-file" type="text" maxlength="260" placeholder="C:\Disag\Daten\dboss.mdb">
+          </label>
+          <button id="set-league-pick" class="set-btn" type="button">Datei wählen …</button>
+        </div>
+        <label class="set-check"><input id="set-league-show" type="checkbox"> Heutige Rundenwettkämpfe auf dem TV-Wartebild anzeigen</label>
+        <small class="set-note" id="set-league-info">Die Datenbank von OpticScore, meist C:\Disag\Daten\dboss.mdb. Gelesen wird nur eine Kopie, OpticScore wird nicht gestört.</small>
+      </section>
+
+      <section class="set-section">
+        <span class="set-label">2. DISAG JSON Live (freiwillig: Schützen und Schüsse live auf dem Wartebild)</span>
+        <small class="set-note set-warn"><b>Vorher in OpticScore einschalten:</b> im OpticScore-Server unter <b>Extras › Optionen › JSON Live</b> JSON Live aktivieren. Für „UDP-Port“ den dort eingestellten Port übernehmen (Standard 30169). Für „Logdatei“ dort zusätzlich „Ausgabe in Logfile aktivieren“ anhaken und hier die Datei wählen.</small>
+        <label class="set-check"><input id="set-gate-enabled" type="checkbox"> Stände und Namen live anzeigen</label>
+        <div class="set-gate set-gate-server">
+          <label class="set-row" title="DNS-Name oder IP-Adresse des PCs mit dem OpticScore-Server. localhost = dieser PC">
+            <span>OpticScore-Server (DNS-Name oder IP)</span><input id="set-gate-host" type="text" maxlength="253" placeholder="localhost">
+          </label>
+          <label class="set-row"><span>Anzahl Stände</span><input id="set-gate-ranges" type="number" min="1" max="40" placeholder="10"></label>
+        </div>
+        <div class="set-source">
+          <span>Datenquelle der Schüsse</span>
+          <label class="set-check"><input type="radio" name="set-gate-source" value="udp"> UDP-Port</label>
+          <label class="set-check"><input type="radio" name="set-gate-source" value="file"> Logdatei</label>
+        </div>
+        <div id="set-gate-fields" class="set-gate set-gate-file set-gate-udp">
+          <label class="set-row" data-gate-source="udp" title="UDP-Port aus dem OpticScore-Server unter Extras > Optionen > JSON Live">
+            <span>UDP-Port</span><input id="set-gate-port" type="number" min="1" max="65535" placeholder="30169">
+          </label>
+          <label class="set-row" data-gate-source="file" title="Die Logdatei, die der OpticScore-Server schreibt (Extras > Optionen > JSON Live, „Ausgabe in Logfile“), meist OUT-JSONInterface.log" hidden>
+            <span>Logdatei JSON Live</span><input id="set-gate-file" type="text" maxlength="260" placeholder="C:\DISAG\JSON Live\OUT-JSONInterface.log">
+          </label>
+          <button id="set-gate-pick" class="set-btn" type="button" data-gate-source="file" hidden>Datei wählen …</button>
+        </div>
+        <small class="set-note">Das Programm liest nur mit. Schützen erscheinen ab dem ersten Schuss. UDP kennt nur Schüsse seit Programmstart, die Logdatei alle von heute.</small>
+      </section>
+
+      <section class="set-section">
+        <span class="set-label">3. Zuweisung sofort anzeigen (freiwillig, baut auf Punkt 2 auf)</span>
+        <small class="set-note">Schützen erscheinen schon beim Zuweisen in OpticScore, nicht erst beim ersten Schuss. Dafür stellt der Knopf das <b>Log-Level von OpticScore</b> von ERROR auf INFO um.</small>
+        <div class="set-oss">
+          <span id="set-oss-state" class="set-oss-state">Stand-Protokoll: wird geprüft …</span>
+          <button id="set-oss-toggle" class="set-btn" type="button" disabled>Stand-Protokoll einschalten</button>
+        </div>
+        <small class="set-note set-warn">Wirkt sofort. <b>Danach OpticScore neu starten.</b> Anderer PC: dort „Stand-Protokoll einschalten.reg“ ausführen.</small>
+        <small class="set-note set-danger">Achtung: Mit Log-Level INFO schreibt OpticScore deutlich mehr Logs (jede Nachricht an jeden Stand). Das braucht Speicherplatz und kann theoretisch zu Problemen führen. Bei Nichtgebrauch wieder ausschalten.</small>
+        <label class="set-check"><input id="set-gate-rangelog" type="checkbox"> Zuweisungen aus dem Stand-Protokoll lesen</label>
+        <div class="set-gate set-gate-file">
+          <label class="set-row" title="Ordner RangesLog von OpticScore mit den Dateien Range1.log, Range2.log …">
+            <span>Ordner RangesLog</span><input id="set-gate-rangelog-folder" type="text" maxlength="260">
+          </label>
+          <button id="set-gate-rangelog-pick" class="set-btn" type="button">Ordner wählen …</button>
+        </div>
+        <small class="set-note">Leer = automatisch. Der Ordner liegt neben der <b>dboss.mdb</b>, meist <b>C:\Disag\Daten\RangesLog</b>. Gelesen werden so viele Stände wie bei „Anzahl Stände“.</small>
+      </section>
+
+      <p id="set-msg" class="set-msg" hidden></p>
+
+      <div class="set-footer">
+        <button id="set-reset" class="set-btn" type="button" title="Vereinsname, Logo und Farben auf das neutrale Aussehen zurücksetzen">Branding zurücksetzen</button>
+        <span class="set-spacer"></span>
+        <button id="set-cancel" class="set-btn" type="button">Abbrechen</button>
+        <button id="set-save" class="set-btn primary" type="button">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="credit" aria-label="Version">v<span class="app-version">1.0</span></div>
+<script src="app.js"></script>
+</body>
+</html>

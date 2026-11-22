@@ -1,0 +1,680 @@
+/* Neutral default colors. A club sets its own in the ⚙ settings dialog (main color, second color, background,
+   stored in the branding file); app.js then sets --accent, --second, --bg and the matching --text and --on-accent
+   on the html element. Everything else below is mixed from those, so three colors are enough. */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 400 700;
+  src: url(assets/oswald.woff2) format('woff2');
+}
+
+:root {
+  --bg: #101418;
+  /* Panels, borders and muted text are mixed from background and text color */
+  --panel: color-mix(in srgb, var(--bg) 95%, var(--text));
+  --panel-2: color-mix(in srgb, var(--bg) 90%, var(--text));
+  --border: color-mix(in srgb, var(--bg) 82%, var(--text));
+  --text: color-mix(in srgb, #ffffff 88%, var(--accent));
+  --muted: color-mix(in srgb, var(--bg) 35%, var(--text));
+  --accent: #4a90d9;        /* main color */
+  --accent-hi: color-mix(in srgb, var(--accent) 60%, var(--text));    /* light accent */
+  --accent-dark: color-mix(in srgb, var(--accent) 70%, var(--bg));    /* dark accent */
+  --on-accent: #ffffff;
+  --second: #e8b030;        /* second color: stripe below the title */
+  --gold: color-mix(in srgb, var(--accent) 70%, var(--text));         /* leading team score */
+  --low: #ec6a5b;
+  --lead: var(--accent-hi);
+  --ok: #8cc56d;
+  --win: #3fb950;           /* winning team */
+  --hit-10: #e8382a;        /* hit 10: red */
+  --hit-9: #f2c200;         /* hit 9: yellow */
+  --hit-8: #35b335;         /* hits 8 and below: green */
+  --stripe: linear-gradient(90deg, var(--second) 0 50%, var(--accent) 50% 100%);
+  --head-font: 'Oswald', 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+h1, h2, #comp-name, .counter, .team-name, .team-total, .shooter-name, .last, .sum b,
+.ov-score, .ov-btn, .comp .name, .idle-wait { font-family: var(--head-font); }
+h1, h2 { font-weight: 600; letter-spacing: .01em; }
+
+/* ---------- Selection ---------- */
+#screen-select { height: 100%; overflow-y: auto; }
+.select-wrap { max-width: 1100px; margin: 0 auto; padding: 5vh 24px 60px; }
+.brand { display: flex; align-items: center; gap: 22px; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 3px solid; border-image: var(--stripe) 1; }
+.brand-logo { height: clamp(80px, 12vh, 130px); width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+.select-wrap h1 { margin: 0; font-size: clamp(28px, 4vw, 48px); text-transform: uppercase; }
+.sub { margin: 4px 0 0; color: var(--accent-hi); font-size: 1.2rem; }
+
+.hint { color: var(--muted); max-width: 720px; margin: 0; font-size: .95rem; }
+
+.list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 12px; }
+.list-head h2 { margin: 0; font-size: 1.4rem; }
+.comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.comp {
+  text-align: left;
+  cursor: pointer;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.comp:hover, .comp:focus-visible { border-color: var(--accent); outline: none; }
+.comp .when { color: var(--muted); font-size: .9rem; }
+.comp .name { font-weight: 600; font-size: 1.3rem; }
+.comp .score { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 1rem; }
+.comp .score .win { color: var(--accent-hi); font-weight: 700; }
+/* Warning on the card: a shooter has fewer shots than the others of the same discipline */
+.comp .short { color: var(--low); font-size: .9rem; }
+.notice { padding: 12px 16px; border-radius: 10px; background: var(--panel-2); margin-bottom: 16px; }
+.notice.err { background: color-mix(in srgb, var(--bg) 80%, var(--low)); border-left: 4px solid var(--low); }
+details { margin-top: 18px; color: var(--muted); }
+
+/* Selection screen: search field and the fold-out list of older and later competitions */
+.list-search {
+  display: flex; align-items: center; gap: 10px;
+  margin: 28px 0 0; padding: 10px 14px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+}
+.list-search:focus-within { border-color: var(--accent); }
+.list-search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font: inherit; font-size: 1.05rem; }
+.list-more { margin-top: 14px; color: var(--text); }
+.list-more > summary {
+  cursor: pointer; padding: 10px 2px; font-family: var(--head-font); font-size: 1.25rem;
+  display: flex; align-items: baseline; gap: 12px; list-style: none;
+}
+.list-more > summary::-webkit-details-marker { display: none; }
+.list-more > summary::before { content: '▸'; color: var(--accent); transition: transform .15s; display: inline-block; }
+.list-more[open] > summary::before { transform: rotate(90deg); }
+.list-more > summary .hint { font-family: inherit; font-size: .9rem; }
+.list-more > .comp-grid, .list-more > .notice { margin-top: 8px; }
+
+/* ---------- TV display ---------- */
+#screen-show { height: 100vh; display: flex; flex-direction: column; }
+body.idle #screen-show { cursor: none; }
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  padding: 1vh 1.5vw;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  min-height: 7vh;
+  flex-wrap: wrap;
+  row-gap: .8vh;
+}
+.title { flex: 1; min-width: 28vw; display: flex; align-items: baseline; gap: 1.2vw; }
+#comp-name { font-size: 3.4vh; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#comp-date { font-size: 2.2vh; color: var(--muted); white-space: nowrap; }
+.counter { font-size: 3.2vh; white-space: nowrap; }
+.counter b { color: var(--accent-hi); font-size: 4vh; font-weight: 600; }
+
+.controls { display: flex; align-items: center; gap: .5vw; margin-left: auto; transition: opacity .4s; }
+body.idle .controls { opacity: 0; pointer-events: none; }
+.controls button {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .6vh .9vw;
+  font-size: 2vh;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.controls button:hover { border-color: var(--accent); }
+.controls button.play { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; min-width: 4vw; }
+.interval { display: flex; align-items: center; gap: .4vw; font-size: 2vh; color: var(--muted); white-space: nowrap; }
+.interval input {
+  width: 4.5em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .4vh .4vw;
+  text-align: center;
+}
+
+.progress { position: relative; height: 1vh; background: var(--panel-2); }
+#prog { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width .4s; }
+#tick { position: absolute; left: 0; right: 0; bottom: 0; height: 35%; background: rgba(213,61,47,.9); transform-origin: left; transform: scaleX(0); }
+
+#rows { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 1vh; padding: 1vh 1vw; }
+.team-row { flex: 1; min-height: 0; display: flex; gap: 1vw; }
+.team-row + .team-row { border-top: 2px solid var(--border); padding-top: 1vh; }
+
+.team-head {
+  flex: 0 0 15vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1vh;
+  padding: 1vh 1vw;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  transition: border-color .4s, box-shadow .4s;
+}
+.team-name { font-size: 3.2vh; font-weight: 600; text-transform: uppercase; color: var(--accent-hi); line-height: 1.15; overflow-wrap: anywhere; }
+.team-total { font-size: 11vh; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.team-sub { font-size: 1.8vh; color: var(--muted); }
+.lead-badge {
+  align-self: flex-start;
+  background: var(--lead);
+  color: var(--on-accent);
+  font-weight: 800;
+  font-size: 2vh;
+  padding: .3vh .8vw;
+  border-radius: 99px;
+  visibility: hidden;
+}
+.team-row.leading .team-head { border-color: var(--lead); box-shadow: 0 0 3vh color-mix(in srgb, var(--accent-hi) 35%, transparent); }
+.team-row.leading .team-total { color: var(--gold); }
+.team-row.leading .lead-badge { visibility: visible; }
+.team-row.won .team-head { border-color: var(--win); box-shadow: 0 0 3vh rgba(63,185,80,.4); }
+.team-row.won .team-total { color: var(--win); }
+
+.cards { flex: 1; min-width: 0; display: flex; justify-content: center; gap: 1vw; }
+.card {
+  flex: 0 0 calc((100% - (var(--cols) - 1) * 1vw) / var(--cols));
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: .8vh .8vw;
+}
+.shooter-name { font-size: 2.8vh; font-weight: 500; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.target { flex: 1; min-height: 0; width: 100%; margin: .5vh 0; }
+.stats { display: flex; justify-content: space-between; align-items: baseline; padding: 0 .4vw; }
+.last { font-size: 6vh; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; min-width: 3ch; }
+.last.r10 { color: var(--hit-10); }
+.last.r9 { color: var(--hit-9); }
+.last.r8 { color: var(--hit-8); }
+.last.flash { animation: flash .9s ease-out; }
+.last.count { font-size: 4.2vh; color: var(--muted); }
+.sum { font-size: 4.8vh; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.sum small { font-size: 1.8vh; color: var(--muted); font-weight: 400; margin-right: .3vw; }
+.series { font-family: var(--head-font); font-size: 3.2vh; font-weight: 500; line-height: 1.1; color: var(--muted); text-align: center; min-height: 3.6vh; margin-top: .6vh; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.series .done { color: var(--text); }
+
+@keyframes flash {
+  0% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Hits on the target */
+/* Color by ring value, stays put. Grey border like the DISAG BeamerView so overlapping holes stay apart.
+   The current shot also gets a white border and the pulse ring. */
+.shot { stroke: rgb(150, 150, 150); stroke-width: 1.5px; }
+.shot.r10 { fill: var(--hit-10); }
+.shot.r9 { fill: var(--hit-9); }
+.shot.r8 { fill: var(--hit-8); }
+.shot-pulse.r10 { stroke: var(--hit-10); }
+.shot-pulse.r9 { stroke: var(--hit-9); }
+.shot-pulse.r8 { stroke: var(--hit-8); }
+.shot-new { fill-opacity: 1; stroke: #fff; stroke-opacity: 1; stroke-width: 3px; }
+.shot-new, .shot-pulse { transform-box: fill-box; transform-origin: center; }
+.shot-new { animation: pop .6s ease-out; }
+.shot.shot-pulse { fill: none; stroke-opacity: 1; stroke-width: 3px; animation: pulse 1.6s ease-out forwards; }
+@keyframes pop { 0% { transform: scale(2.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+
+/* Version number in the bottom right corner, on every view (control page and TV display) */
+.credit {
+  position: fixed;
+  right: 10px;
+  bottom: 6px;
+  z-index: 30;
+  font-size: clamp(12px, .8vw, 18px);
+  letter-spacing: .02em;
+  color: var(--muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Start and final overlay */
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  z-index: 10;
+}
+.ov-box {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  padding: 5vh 5vw;
+  text-align: center;
+  max-width: 80vw;
+}
+.ov-box h2 { margin: 0 0 1vh; font-size: 6vh; text-transform: uppercase; }
+.ov-box .ov-sub { color: var(--muted); font-size: 2.6vh; margin-bottom: 3vh; }
+.ov-score { font-size: 8vh; font-weight: 600; margin: 2vh 0; font-variant-numeric: tabular-nums; }
+.ov-score .win { color: var(--gold); }
+.ov-line { font-size: 2.8vh; margin: 1vh 0; }
+.ov-shots { font-size: 2.2vh; color: var(--muted); }
+.ov-btn {
+  margin-top: 3vh;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 14px;
+  font-size: 3.2vh;
+  font-weight: 800;
+  padding: 1.6vh 3vw;
+  cursor: pointer;
+}
+.ov-btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); margin-left: 1vw; }
+.ov-hint { color: var(--muted); font-size: 2vh; margin-top: 2vh; }
+.ov-wait { display: none; color: var(--muted); font-size: 3vh; margin-top: 2vh; }
+
+/* ---------- Two screens: control page and TV ---------- */
+.tv-panel, .data-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+.tv-panel button, .data-panel button {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.tv-panel button:hover, .data-panel button:hover { border-color: var(--accent); }
+.data-panel { justify-content: center; }
+.data-panel .reload-btn { font-size: 1.1rem; padding: 12px 28px; }
+.tv-status { flex: 1; min-width: 220px; font-weight: 600; }
+.tv-status.ok, .tv-badge.ok { color: var(--ok); }
+.tv-status.bad, .tv-badge.bad { color: var(--low); }
+.tv-badge { font-size: 2.6vh; }
+.tv-badge.bad { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+
+/* TV display: no controls, no mouse cursor */
+body.display, body.display * { cursor: none !important; }
+body.display .controls,
+body.display .ov-btn,
+body.display .ov-hint,
+body.display .ov-settings { display: none !important; }
+body.display .ov-wait { display: block; }
+
+#screen-idle { height: 100vh; display: grid; place-items: center; text-align: center; }
+.idle-box h1 { font-size: 12vh; margin: 0; text-transform: uppercase; }
+.idle-club { font-size: 5vh; color: var(--accent-hi); margin: 1vh 0 6vh; }
+.idle-wait { font-size: 4vh; color: var(--accent); }
+
+/* ---------- Reload button and discipline ---------- */
+.data-panel button:disabled { opacity: .6; cursor: wait; }
+.comp .disc { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  display: inline-block;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 .5em;
+  font-size: .8em;
+  font-weight: 600;
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+/* ---------- Logo ---------- */
+.bar-logo { height: 5.5vh; width: auto; flex: none; }
+.ov-box { border-color: var(--accent-dark); border-top: 6px solid; border-image: var(--stripe) 1; border-radius: 0; }
+.ov-logo { display: block; height: 14vh; width: auto; margin: 0 auto 2vh; filter: drop-shadow(0 .6vh 1.4vh rgba(0,0,0,.6)); }
+.idle-logo { height: 42vh; width: auto; margin-bottom: 3vh; filter: drop-shadow(0 1vh 3vh rgba(0,0,0,.7)); }
+#screen-idle { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg) 88%, var(--accent)) 0%, var(--bg) 70%); }
+.idle-box h1 { color: var(--text); }
+
+/* ---------- Full screen view of one shooter ---------- */
+#single { flex: 1; min-height: 0; display: flex; gap: 3vw; align-items: center; padding: 2vh 3vw; }
+.single-target { flex: none; height: 100%; aspect-ratio: 1; display: flex; }
+.single-target .target { width: 100%; height: 100%; margin: 0; }
+.single-info { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 1.6vh; }
+.single-team { font-family: var(--head-font); font-size: 3.4vh; text-transform: uppercase; color: var(--accent-hi); letter-spacing: .03em; }
+.single-name { font-family: var(--head-font); font-size: 7.5vh; font-weight: 600; line-height: 1; overflow-wrap: anywhere; }
+.single-disc .tag { font-size: 2.2vh; }
+.single-stats { display: flex; align-items: baseline; justify-content: space-between; gap: 2vw; padding: 1vh 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.single-last { font-family: var(--head-font); font-size: 15vh; font-weight: 600; line-height: 1; min-width: 2ch; font-variant-numeric: tabular-nums; }
+.single-last.r10 { color: var(--hit-10); }
+.single-last.r9 { color: var(--hit-9); }
+.single-last.r8 { color: var(--hit-8); }
+.single-last.flash { animation: flash .6s ease-out; }
+.single-sum { font-family: var(--head-font); text-align: right; line-height: 1; }
+.single-sum small { display: block; font-size: 2.4vh; color: var(--muted); font-weight: 400; margin-bottom: .6vh; }
+.single-sum b { font-size: 11vh; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Shot table: one row per series */
+.single-grid { display: flex; flex-direction: column; gap: .7vh; }
+.sg-row { display: grid; grid-template-columns: 3.2vw repeat(var(--per), 1fr) 6vw; gap: .35vw; align-items: center; }
+.sg-label { font-size: 2vh; color: var(--muted); }
+.sg-cell {
+  font-family: var(--head-font);
+  font-size: 2.9vh;
+  font-weight: 500;
+  text-align: center;
+  line-height: 4.6vh;
+  height: 4.6vh;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  color: #151515;
+}
+.sg-cell.sg-empty { visibility: hidden; }
+.sg-cell.r10 { background: var(--hit-10); border-color: var(--hit-10); color: #fff; }
+.sg-cell.r9 { background: var(--hit-9); border-color: var(--hit-9); }
+.sg-cell.r8 { background: var(--hit-8); border-color: var(--hit-8); }
+.sg-cell.cur { outline: .35vh solid #fff; outline-offset: .15vh; }
+.sg-sum { font-family: var(--head-font); font-size: 3.4vh; font-weight: 600; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sg-sum.done { color: var(--text); }
+
+/* Team scores at the bottom */
+.single-score { display: flex; gap: 1.2vw; margin-top: 1vh; }
+.ss-team { flex: 1; display: flex; justify-content: space-between; align-items: baseline; gap: 1vw; background: var(--panel); border: 2px solid var(--border); border-radius: 12px; padding: 1vh 1.2vw; }
+.ss-team.active { border-color: var(--accent); }
+.ss-team.leading .ss-total { color: var(--gold); }
+.ss-name { font-family: var(--head-font); font-size: 2.6vh; text-transform: uppercase; color: var(--accent-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-total { font-family: var(--head-font); font-size: 5vh; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Overview: the shooter who just finished is highlighted */
+.card { transition: border-color .4s, box-shadow .4s; }
+.card.focus { border: 2px solid var(--accent); box-shadow: 0 0 2.5vh color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* Timer settings in the start overlay */
+.ov-settings { display: flex; justify-content: center; gap: 1.2vw; margin: 3vh 0 0; flex-wrap: wrap; }
+.ov-settings label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6vh;
+  width: 15vw;
+  min-width: 150px;
+  padding: 1.4vh 1vw;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: text;
+}
+.ov-set-label { font-family: var(--head-font); font-size: 2.4vh; text-transform: uppercase; color: var(--accent-hi); letter-spacing: .03em; }
+.ov-set-input { font-size: 2.4vh; color: var(--muted); }
+.ov-set-input input {
+  width: 4.2em;
+  font-family: var(--head-font);
+  font-size: 3.4vh;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .3vh .3vw;
+  color: var(--text);
+}
+.ov-set-input input:focus { outline: none; border-color: var(--accent); }
+.ov-settings small { font-size: 1.5vh; color: var(--muted); line-height: 1.25; }
+
+/* Screen selection for the TV display */
+.tv-screen { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.tv-screen select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  max-width: 340px;
+}
+.tv-screen select:focus { outline: none; border-color: var(--accent); }
+.tv-panel .tv-status { flex-basis: 100%; }
+.tv-panel #tv-quit { margin-left: auto; }
+
+/* ---------- Settings: club name, logo, colors ---------- */
+.brand { position: relative; }
+.settings-btn {
+  margin-left: auto;
+  align-self: flex-start;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.settings-btn:hover { border-color: var(--accent); }
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.settings-box {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: 5px solid;
+  border-image: var(--stripe) 1;
+  padding: 22px 26px;
+}
+.settings-box h2 { margin: 0 0 16px; font-size: 1.6rem; text-transform: uppercase; }
+.set-section { padding: 14px 0; border-top: 1px solid var(--border); }
+.set-label { display: block; font-family: var(--head-font); text-transform: uppercase; letter-spacing: .03em; color: var(--accent-hi); margin-bottom: 8px; }
+.set-row input[type="text"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 1.1rem;
+}
+.set-row input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+.set-logo { display: flex; gap: 20px; align-items: center; }
+#set-logo-preview { width: 96px; height: 96px; object-fit: contain; background: var(--panel-2); border-radius: 10px; padding: 6px; flex: none; }
+.set-logo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.set-file-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.set-logo-actions .set-label { flex-basis: 100%; margin-bottom: 0; }
+.set-logo-actions small { flex-basis: 100%; color: var(--muted); }
+
+.set-colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.set-color { display: flex; gap: 10px; align-items: center; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.set-color input[type="color"] { width: 44px; height: 36px; border: none; padding: 0; background: none; cursor: pointer; flex: none; }
+.set-color span { display: flex; flex-direction: column; line-height: 1.2; }
+.set-color small { color: var(--muted); font-size: .8rem; }
+
+.set-btn {
+  display: inline-block;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.set-btn:hover { border-color: var(--accent); }
+.set-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.set-btn:disabled { opacity: .6; cursor: wait; }
+.set-footer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 16px; border-top: 1px solid var(--border); }
+.set-spacer { flex: 1; }
+.set-msg { margin: 0 0 12px; color: var(--muted); }
+.set-msg.err { color: var(--low); }
+
+/* ---------- Idle screen: ranges with logged-in shooters (DISAG Gate) ---------- */
+#screen-idle.with-ranges { place-items: stretch; }
+#screen-idle.with-ranges .idle-box {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "logo title" "logo club" "league league" "ranges ranges" "gate gate" "wait wait";
+  align-items: center;
+  column-gap: 3vw;
+  padding: 5vh 5vw 4vh;
+  text-align: left;
+}
+#screen-idle.with-ranges .idle-logo { grid-area: logo; height: 20vh; margin: 0; }
+#screen-idle.with-ranges h1 { grid-area: title; font-size: 9vh; align-self: end; line-height: 1; }
+#screen-idle.with-ranges .idle-club { grid-area: club; margin: 1vh 0 0; align-self: start; }
+#screen-idle.with-ranges .idle-wait { grid-area: wait; text-align: center; margin: 2vh 0 0; }
+/* Today's Rundenwettkaempfe: one card per match, up to 4 side by side (--league-cols set by app.js),
+   time on top, the two teams below each other, discipline at the bottom */
+.idle-league {
+  grid-area: league;
+  --league-gap: 1.2vw;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;   /* a last row with fewer cards stays centered */
+  gap: 1.5vh var(--league-gap);
+  margin: 0 auto 4vh;
+  width: min(92vw, calc(var(--league-cols, 1) * 46vh));
+}
+#screen-idle.with-ranges .idle-league { margin: 3vh auto 0; width: min(100%, calc(var(--league-cols, 1) * 46vh)); }
+.idle-league > .league-match { flex: 0 0 calc((100% - (var(--league-cols, 1) - 1) * var(--league-gap)) / var(--league-cols, 1)); }
+/* More than 4 matches (two rows): smaller logo and title so everything stays on the screen */
+#screen-idle.with-league.league-many:not(.with-ranges) .idle-logo { height: 13vh; margin-bottom: .5vh; }
+#screen-idle.with-league.league-many:not(.with-ranges) .idle-box h1 { font-size: 7vh; }
+#screen-idle.with-league.league-many .idle-club { font-size: 3.6vh; margin: .5vh 0 2.5vh; }
+/* Matches and range tiles together: compact header and spacing so "Gleich geht's los" stays visible */
+#screen-idle.with-ranges.with-league .idle-box { padding-top: 3vh; padding-bottom: 2vh; }
+#screen-idle.with-ranges.with-league .idle-logo { height: 14vh; }
+#screen-idle.with-ranges.with-league h1 { font-size: 7vh; }
+#screen-idle.with-ranges.with-league .idle-club { font-size: 3.6vh; }
+#screen-idle.with-ranges.with-league .idle-league { margin-top: 2vh; }
+#screen-idle.with-ranges.with-league .idle-ranges { margin-top: 2.5vh; }
+#screen-idle.with-ranges.with-league .idle-wait { margin-top: 1vh; font-size: 3.4vh; }
+/* Without range tiles but with matches: smaller logo so everything fits on the screen */
+#screen-idle.with-league:not(.with-ranges) .idle-logo { height: 28vh; }
+#screen-idle.with-league:not(.with-ranges) .idle-club { margin-bottom: 4vh; }
+.league-match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .8vh;
+  min-width: 0;
+  padding: 1.4vh 1.2vw;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-top: 0.6vh solid var(--accent);
+  border-radius: 1.2vh;
+  text-align: center;
+}
+/* One heading "Heute" above all match cards (full row) */
+.league-head {
+  flex: 0 0 100%;
+  margin: 0;
+  font-family: var(--head-font); font-size: 2.8vh; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; text-align: center; color: var(--accent-hi);
+}
+.league-teams { font-family: var(--head-font); font-size: 3.2vh; line-height: 1.15; display: flex; flex-direction: column; align-items: center; gap: .3vh; max-width: 100%; }
+/* Long club names may wrap onto a second line, only longer ones are cut */
+.league-teams b {
+  font-weight: 600; max-width: 100%; overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.league-teams i { font-style: normal; font-size: 1.7vh; color: var(--muted); text-transform: uppercase; letter-spacing: .15em; }
+.league-disc { font-size: 1.8vh; color: var(--muted); }
+#screen-idle.with-ranges .league-teams { font-size: 2.8vh; }
+
+.idle-gate { grid-area: gate; text-align: center; color: var(--low); font-size: 2.4vh; margin: 1.5vh 0 0; }
+
+.idle-ranges {
+  grid-area: ranges;
+  display: grid;
+  grid-template-columns: repeat(var(--range-cols, 5), 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1.6vh 1.2vw;
+  margin-top: 5vh;
+}
+.range-tile {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-top: .7vh solid var(--accent);
+  border-radius: 1.4vh;
+  padding: 2vh 1.2vw 2.4vh;
+  min-height: 19vh;
+  display: flex;
+  flex-direction: column;
+  gap: .6vh;
+  min-width: 0;
+  transition: border-color .4s, background .4s;
+}
+.range-no { font-family: var(--head-font); font-size: 2.4vh; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-hi); }
+.range-first { font-size: 2.8vh; color: var(--text); margin-top: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.range-last { font-family: var(--head-font); font-size: 4.6vh; font-weight: 600; line-height: 1.05; color: var(--text); overflow-wrap: anywhere; }
+.range-tile.free { background: transparent; border-style: dashed; border-top: .7vh dashed var(--border); }
+.range-tile.free .range-no { color: var(--muted); }
+.range-tile.free .range-last { color: var(--muted); font-weight: 400; font-size: 3.6vh; }
+.range-tile.unknown { opacity: .45; }
+.range-tile.new { animation: range-new 1.6s ease-out; }
+@keyframes range-new { 0% { border-color: var(--accent-hi); background: color-mix(in srgb, var(--panel) 70%, var(--accent)); } 100% { } }
+
+/* Gate status on the control page and Gate fields in the settings dialog */
+.tv-panel .gate-status { flex-basis: 100%; font-size: .95rem; color: var(--muted); margin-top: -4px; }
+.gate-status.ok { color: var(--ok); }
+.gate-status.bad { color: var(--low); }
+.set-check { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; }
+.set-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+/* JSON Live: choice of the data source */
+.set-source { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin-bottom: 12px; }
+.set-source > span { font-size: .85rem; color: var(--muted); }
+.set-source .set-check { margin-bottom: 0; }
+/* JSON Live: folder field, its "Ordner wählen" button (aligned with the field) and the number of ranges */
+.set-gate { display: grid; grid-template-columns: 1fr auto 9rem; gap: 12px; align-items: end; }
+/* Rows of this section: server and number of ranges, then the fields of the chosen data source */
+.set-gate-server { grid-template-columns: 1fr 9rem; margin-bottom: 12px; }
+.set-gate-file { grid-template-columns: 1fr auto; }
+.set-gate-udp { grid-template-columns: 9rem; }
+.set-note { display: block; margin-top: 8px; color: var(--muted); }
+.set-gate .set-row { display: flex; flex-direction: column; gap: 4px; }
+.set-gate .set-row span { font-size: .85rem; color: var(--muted); }
+.set-gate input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+.set-gate input:focus { outline: none; border-color: var(--accent); }
+
+/* Shot progress on the range tiles */
+.range-shots { font-family: var(--head-font); font-size: 2.5vh; color: var(--muted); margin-top: 1.2vh; font-variant-numeric: tabular-nums; }
+.range-shots b { color: var(--text); font-weight: 600; font-size: 3vh; }
+.range-shots.probe { color: var(--accent-hi); }
+.range-shots.done, .range-shots.done b { color: var(--ok); }
+.range-bar { display: block; height: .7vh; border-radius: 1vh; background: var(--panel-2); overflow: hidden; }
+.range-bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .6s ease; }
+.range-shots.done + .range-bar i { background: var(--ok); }
+
+
+/* Settings: state of the range logs in OpticScore (registry) and the button that switches them */
+.set-oss { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
+.set-oss-state { flex: 1 1 16rem; font-weight: 600; }
+.set-oss-state.ok { color: var(--ok); }
+.set-oss-state.bad { color: var(--low); }
+.set-note.set-warn { color: var(--text); }
+.set-note.set-danger { color: var(--low); font-weight: 600; }
+/* Settings: one line above the data sources saying which of them are needed */
+.set-intro { margin: 18px 0 4px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--panel-2); border-radius: 6px; }
+.set-note + .set-check { margin-top: 10px; }
