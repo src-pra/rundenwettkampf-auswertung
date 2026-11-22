@@ -1,6 +1,8 @@
 # Rundenwettkampf Auswertung
 
-Aktuelle Version: **v1.0**, das Programm liegt im Ordner [`v1.0`](v1.0). Herunterladen: oben auf **Code › Download ZIP**, dann den Ordner `v1.0` auf den PC kopieren und darin **Starten.cmd** doppelklicken.
+Aktuelle Version: **v1.0**, Ordner [`rwk-auswertung-v1.0`](rwk-auswertung-v1.0).
+
+**Herunterladen:** Immer den **kompletten Ordner** `rwk-auswertung-v1.0` herunterladen, nicht nur einzelne Dateien: oben auf **Code › Download ZIP** klicken, die ZIP-Datei entpacken und den Ordner `rwk-auswertung-v1.0` an einen festen Platz auf dem PC kopieren (zum Beispiel `C:\rwk-auswertung-v1.0`). Darin **Starten.cmd** doppelklicken.
 
 
 <p>Spielt einen Rundenwettkampf nach dem Schießen auf dem Fernseher ab: Schuss für Schuss, mit Übersicht und Endergebnis.
